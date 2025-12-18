@@ -20,7 +20,7 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
             statusDiv.classList.add('status-success');
             statusDiv.innerHTML = `<i class="fa-solid fa-check-circle"></i> Success! Saved to: <strong>${result.path}</strong>`;
         } else {
-            statusDiv.classList.add('status-error'); // Or neutral
+            statusDiv.classList.add('status-error'); //  Or neutral
             statusDiv.innerHTML = '<i class="fa-solid fa-circle-info"></i> Save cancelled.';
         }
     } else {
