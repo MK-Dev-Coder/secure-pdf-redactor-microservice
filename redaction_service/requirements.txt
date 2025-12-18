@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+python-consul
+fpdf
+pydantic
+requests
+spacy
+pypdf
+python-multipart
