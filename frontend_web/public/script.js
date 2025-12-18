@@ -72,3 +72,31 @@ function showStatus(message, type) {
     
     statusDiv.style.display = 'flex';
 }
+
+// Settings & Theme Logic
+const settingsBtn = document.getElementById('settingsBtn');
+const settingsDropdown = document.getElementById('settingsDropdown');
+
+// Toggle Dropdown
+settingsBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    settingsDropdown.classList.toggle('show');
+});
+
+// Close dropdown when clicking outside
+document.addEventListener('click', (e) => {
+    if (!settingsBtn.contains(e.target) && !settingsDropdown.contains(e.target)) {
+        settingsDropdown.classList.remove('show');
+    }
+});
+
+// Theme Management
+function setTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+    settingsDropdown.classList.remove('show');
+}
+
+// Load saved theme
+const savedTheme = localStorage.getItem('theme') || 'light';
+setTheme(savedTheme);

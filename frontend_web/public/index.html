@@ -18,6 +18,18 @@
             --border: #E5E7EB;
             --success: #10B981;
             --error: #EF4444;
+            --dropdown-bg: #FFFFFF;
+            --dropdown-hover: #F3F4F6;
+        }
+
+        [data-theme="dark"] {
+            --bg: #111827;
+            --card-bg: #1F2937;
+            --text: #F9FAFB;
+            --text-light: #9CA3AF;
+            --border: #374151;
+            --dropdown-bg: #374151;
+            --dropdown-hover: #4B5563;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -31,6 +43,7 @@
             align-items: center;
             min-height: 100vh;
             padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
         }
 
         .container {
@@ -40,6 +53,67 @@
             padding: 2rem;
             border-radius: 16px;
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            position: relative;
+            transition: background-color 0.3s;
+        }
+
+        /* Settings Button & Dropdown */
+        .settings-container {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+        }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            color: var(--text-light);
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            transition: background-color 0.2s, color 0.2s;
+            width: auto;
+            display: inline-flex;
+        }
+
+        .icon-btn:hover {
+            background-color: var(--border);
+            color: var(--text);
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 8px;
+            background-color: var(--dropdown-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            width: 150px;
+            display: none;
+            z-index: 10;
+            overflow: hidden;
+        }
+
+        .dropdown-menu.show {
+            display: block;
+        }
+
+        .dropdown-item {
+            padding: 10px 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+            color: var(--text);
+            transition: background-color 0.2s;
+        }
+
+        .dropdown-item:hover {
+            background-color: var(--dropdown-hover);
         }
 
         header {
@@ -87,6 +161,8 @@
             font-size: 1rem;
             resize: vertical;
             transition: border-color 0.2s, box-shadow 0.2s;
+            background-color: var(--card-bg);
+            color: var(--text);
         }
 
         textarea:focus {
@@ -161,6 +237,20 @@
 </head>
 <body>
     <div class="container">
+        <div class="settings-container">
+            <button id="settingsBtn" class="icon-btn" title="Settings">
+                <i class="fa-solid fa-gear"></i>
+            </button>
+            <div id="settingsDropdown" class="dropdown-menu">
+                <div class="dropdown-item" onclick="setTheme('light')">
+                    <i class="fa-solid fa-sun"></i> Light
+                </div>
+                <div class="dropdown-item" onclick="setTheme('dark')">
+                    <i class="fa-solid fa-moon"></i> Dark
+                </div>
+            </div>
+        </div>
+
         <header>
             <h1><i class="fa-solid fa-shield-halved"></i> Secure Redactor</h1>
             <p class="subtitle">Remove sensitive PII from your text automatically.</p>
