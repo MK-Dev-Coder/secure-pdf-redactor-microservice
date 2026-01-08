@@ -1,0 +1,59 @@
+name: Build and Deploy to Azure
+
+on:
+  push:
+    branches:
+      - main
+      - part-B
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Build and Push Redaction Service
+        run: |
+          ACR_LOGIN_SERVER=${{ secrets.ACR_NAME }}.azurecr.io
+          az acr login --name ${{ secrets.ACR_NAME }}
+          
+          # Build
+          docker build -t $ACR_LOGIN_SERVER/redaction-service:${{ github.sha }} ./redaction_service
+          docker build -t $ACR_LOGIN_SERVER/redaction-service:latest ./redaction_service
+          
+          # Push
+          docker push $ACR_LOGIN_SERVER/redaction-service:${{ github.sha }}
+          docker push $ACR_LOGIN_SERVER/redaction-service:latest
+
+      - name: Build and Push Frontend Web
+        run: |
+          ACR_LOGIN_SERVER=${{ secrets.ACR_NAME }}.azurecr.io
+          
+          # Build
+          docker build -t $ACR_LOGIN_SERVER/frontend-web:${{ github.sha }} ./frontend_web
+          docker build -t $ACR_LOGIN_SERVER/frontend-web:latest ./frontend_web
+          
+          # Push
+          docker push $ACR_LOGIN_SERVER/frontend-web:${{ github.sha }}
+          docker push $ACR_LOGIN_SERVER/frontend-web:latest
+
+      - name: Deploy Redaction Service
+        run: |
+          az containerapp update \
+            --name redaction-service \
+            --resource-group ${{ secrets.RESOURCE_GROUP }} \
+            --image ${{ secrets.ACR_NAME }}.azurecr.io/redaction-service:${{ github.sha }}
+
+      - name: Deploy Frontend Web
+        run: |
+          az containerapp update \
+            --name frontend-web \
+            --resource-group ${{ secrets.RESOURCE_GROUP }} \
+            --image ${{ secrets.ACR_NAME }}.azurecr.io/frontend-web:${{ github.sha }}
