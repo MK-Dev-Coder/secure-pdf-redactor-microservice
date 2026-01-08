@@ -217,6 +217,15 @@ async def redact_pdf_file(file: UploadFile = File(...)):
                     # Check Regex (Email)
                     if re.match(r'[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}', word):
                         should_redact = True
+
+                    # Check Regex (House Numbers / Phone portions)
+                    # aggressively redact 3-6 digit numbers in images (covers strict house numbers like 1035)
+                    if re.match(r'^\d{3,6}$', word):
+                        should_redact = True
+
+                    # Check Regex (Address Context words)
+                    if re.match(r'^(Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Lane|Ln|Drive|Dr|Way|Court|Ct|Plaza|Plz)$', word, re.IGNORECASE):
+                        should_redact = True
                         
                     # Check NLP Match (Token based)
                     # We strip punctuation to match tokens like "Mike," -> "Mike"
