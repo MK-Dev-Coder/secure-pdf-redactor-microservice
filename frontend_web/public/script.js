@@ -100,3 +100,24 @@ function setTheme(theme) {
 // Load saved theme
 const savedTheme = localStorage.getItem('theme') || 'light';
 setTheme(savedTheme);
+
+// Stats Logic
+document.getElementById('statsBtn').addEventListener('click', async () => {
+    const panel = document.getElementById('statsPanel');
+    if (panel.style.display === 'none') {
+        panel.style.display = 'block';
+        
+        try {
+            const res = await fetch('/api/stats');
+            const data = await res.json();
+            document.getElementById('statTotal').innerText = data.total_redactions;
+            document.getElementById('statPdf').innerText = data.pdf_redactions;
+            document.getElementById('statText').innerText = data.text_redactions;
+        } catch (e) {
+            console.error("Stats fail", e);
+            panel.innerHTML = "Failed to load stats.";
+        }
+    } else {
+        panel.style.display = 'none';
+    }
+});

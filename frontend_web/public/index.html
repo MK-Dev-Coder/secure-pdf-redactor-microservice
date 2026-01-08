@@ -272,6 +272,16 @@
             <i class="fa-solid fa-file-pdf"></i> Redact & Download PDF
         </button>
 
+        <!-- Stats Section -->
+        <div id="statsBtn" style="text-align: center; margin-top: 1rem; cursor: pointer; color: var(--primary); font-size: 0.9rem;">
+            <i class="fa-solid fa-chart-simple"></i> View Usage Stats
+        </div>
+        <div id="statsPanel" style="display: none; margin-top: 1rem; padding: 1rem; background: var(--bg); border-radius: 8px; font-size: 0.9rem;">
+            <p><strong>Total Redactions:</strong> <span id="statTotal">...</span></p>
+            <p><strong>PDFs Processed:</strong> <span id="statPdf">...</span></p>
+            <p><strong>Text Processed:</strong> <span id="statText">...</span></p>
+        </div>
+
         <div id="status"></div>
         <div style="margin-top: 2rem; text-align: center; color: var(--text-light); font-size: 0.8rem; opacity: 0.7;">
             Version: v4.1 (CI/CD Enabled) 🚀

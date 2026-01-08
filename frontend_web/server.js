@@ -77,6 +77,17 @@ app.post('/api/redact/pdf', upload.single('file'), async (req, res) => {
     }
 });
 
+// Proxy for stats
+app.get('/api/stats', async (req, res) => {
+    try {
+        const response = await axios.get(`${BACKEND_URL}/stats`);
+        res.json(response.data);
+    } catch (error) {
+         console.error('Stats error:', error.message);
+         res.status(500).json({ error: 'Failed to fetch stats.' });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`Web frontend running on http://localhost:${PORT}`);
 });

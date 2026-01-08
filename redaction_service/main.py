@@ -12,8 +12,29 @@ import uuid
 import spacy
 import hashlib
 import base64
+from sqlalchemy import create_engine, Column, Integer, String, DateTime
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+import datetime
 
 app = FastAPI()
+
+# Database Setup (SQLite)
+DATABASE_URL = "sqlite:///./redaction.db"
+engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
+
+# Database Model
+class RedactionLog(Base):
+    __tablename__ = "redaction_logs"
+    id = Column(Integer, primary_key=True, index=True)
+    timestamp = Column(DateTime, default=datetime.datetime.utcnow)
+    request_type = Column(String)  # 'text' or 'pdf'
+    item_count = Column(Integer)   # Length of text or number of pages
+
+# Create Tables
+Base.metadata.create_all(bind=engine)
 
 # Load SpaCy Model
 try:
@@ -101,6 +122,17 @@ def redact_text(text: str) -> str:
 async def redact_and_pdf(request: TextRequest):
     redacted_content = redact_text(request.text)
     
+    # Log to Database
+    db = SessionLocal()
+    try:
+        log_entry = RedactionLog(request_type="text", item_count=len(request.text))
+        db.add(log_entry)
+        db.commit()
+    except Exception as e:
+        print(f"DB Error: {e}")
+    finally:
+        db.close()
+    
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", size=12)
@@ -142,6 +174,17 @@ async def redact_pdf_file(file: UploadFile = File(...)):
     # Redact the extracted text
     redacted_content = redact_text(text)
     
+    # Log to Database
+    db = SessionLocal()
+    try:
+        log_entry = RedactionLog(request_type="pdf", item_count=len(reader.pages))
+        db.add(log_entry)
+        db.commit()
+    except Exception as e:
+        print(f"DB Error: {e}")
+    finally:
+        db.close()
+    
     # Generate new PDF
     pdf = FPDF()
     pdf.add_page()
@@ -170,6 +213,27 @@ async def redact_pdf_file(file: UploadFile = File(...)):
             "hash": {"href": "/hash", "method": "POST"}
         }
     }
+
+@app.get("/stats")
+async def get_stats():
+    db = SessionLocal()
+    try:
+        total_requests = db.query(RedactionLog).count()
+        text_requests = db.query(RedactionLog).filter(RedactionLog.request_type == "text").count()
+        pdf_requests = db.query(RedactionLog).filter(RedactionLog.request_type == "pdf").count()
+        
+        # Get last 5 requests
+        recents = db.query(RedactionLog).order_by(RedactionLog.timestamp.desc()).limit(5).all()
+        recent_logs = [{"id": r.id, "type": r.request_type, "time": r.timestamp.isoformat()} for r in recents]
+        
+        return {
+            "total_redactions": total_requests,
+            "text_redactions": text_requests,
+            "pdf_redactions": pdf_requests,
+            "recent_activity": recent_logs
+        }
+    finally:
+        db.close()
 
 if __name__ == "__main__":
     import uvicorn
