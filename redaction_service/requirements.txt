@@ -8,3 +8,6 @@ spacy
 pypdf
 python-multipart
 sqlalchemy
+
+pytest
+httpx
