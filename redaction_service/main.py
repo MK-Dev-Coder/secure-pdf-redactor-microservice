@@ -186,7 +186,9 @@ async def redact_pdf_file(file: UploadFile = File(...)):
             
             for img in images:
                 # 1. Get OCR Data (Words + Coordinates)
-                data = pytesseract.image_to_data(img, output_type=Output.DICT)
+                # Use PSM 11 (Sparse Text) to better detect spread out words/numbers
+                custom_config = r'--psm 11'
+                data = pytesseract.image_to_data(img, output_type=Output.DICT, config=custom_config)
                 draw = ImageDraw.Draw(img)
                 n_boxes = len(data['text'])
                 
@@ -219,8 +221,9 @@ async def redact_pdf_file(file: UploadFile = File(...)):
                         should_redact = True
 
                     # Check Regex (House Numbers / Phone portions)
-                    # aggressively redact 3-6 digit numbers in images (covers strict house numbers like 1035)
-                    if re.match(r'^\d{3,6}$', word):
+                    # aggressive: redact matches for ANY digit sequence in images 
+                    # This catches vertical numbers like "1", "0", "3", "5" often split by OCR
+                    if re.match(r'^\d+$', word):
                         should_redact = True
 
                     # Check Regex (Address Context words)
