@@ -1,6 +1,6 @@
 ﻿fastapi
 uvicorn
-python-consul
+python-consul2
 fpdf
 pydantic
 requests
