@@ -37,6 +37,10 @@
         body {
             font-family: 'Inter', sans-serif;
             background-color: var(--bg);
+            background-image: var(--bg-image, none);
+            background-repeat: repeat-y;
+            background-position: left top, right top;
+            background-size: 15% auto; 
             color: var(--text);
             display: flex;
             justify-content: center;
@@ -55,6 +59,7 @@
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
             position: relative;
             transition: background-color 0.3s;
+            z-index: 10; /* Ensure container is above background */
         }
 
         /* Settings Button & Dropdown */
@@ -243,10 +248,18 @@
             </button>
             <div id="settingsDropdown" class="dropdown-menu">
                 <div class="dropdown-item" onclick="setTheme('light')">
-                    <i class="fa-solid fa-sun"></i> Light
+                    <i class="fa-solid fa-sun"></i> Light Mode
                 </div>
                 <div class="dropdown-item" onclick="setTheme('dark')">
-                    <i class="fa-solid fa-moon"></i> Dark
+                    <i class="fa-solid fa-moon"></i> Dark Mode
+                </div>
+                <div style="height: 1px; background: var(--border); margin: 4px 0;"></div>
+                <div class="dropdown-header" style="padding: 5px 16px; font-size: 0.75rem; color: var(--text-light); font-weight: 600;">BACKGROUND</div>
+                <div class="dropdown-item" onclick="setBackground('none')">
+                    <i class="fa-solid fa-ban"></i> None
+                </div>
+                <div class="dropdown-item" onclick="setBackground('fib')">
+                    <i class="fa-solid fa-user-secret"></i> FIB Pattern
                 </div>
             </div>
         </div>

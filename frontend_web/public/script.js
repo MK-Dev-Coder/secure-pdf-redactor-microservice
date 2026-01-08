@@ -97,9 +97,27 @@ function setTheme(theme) {
     settingsDropdown.classList.remove('show');
 }
 
-// Load saved theme
+// Background Management
+function setBackground(type) {
+    const body = document.body;
+    if (type === 'fib') {
+        const url = `url('images/fib_logo.png'), url('images/fib_logo.png')`;
+        body.style.setProperty('--bg-image', url);
+        body.style.backgroundPosition = 'left top, right top';
+        body.style.backgroundRepeat = 'repeat-y, repeat-y';
+    } else {
+        body.style.setProperty('--bg-image', 'none');
+    }
+    localStorage.setItem('background', type);
+    settingsDropdown.classList.remove('show');
+}
+
+// Load saved preferences
 const savedTheme = localStorage.getItem('theme') || 'light';
 setTheme(savedTheme);
+
+const savedBg = localStorage.getItem('background') || 'none';
+setBackground(savedBg);
 
 // Stats Logic
 document.getElementById('statsBtn').addEventListener('click', async () => {
