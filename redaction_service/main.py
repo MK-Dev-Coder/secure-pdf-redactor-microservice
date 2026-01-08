@@ -17,8 +17,9 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import datetime
 import pytesseract
+from pytesseract import Output
 from pdf2image import convert_from_bytes
-from PIL import Image
+from PIL import Image, ImageDraw
 
 app = FastAPI()
 
@@ -181,10 +182,74 @@ async def redact_pdf_file(file: UploadFile = File(...)):
         print("Standard extraction failed. Running OCR...")
         try:
             images = convert_from_bytes(content)
+            redacted_images = []
+            
             for img in images:
-                text += pytesseract.image_to_string(img) + "\n"
+                # 1. Get OCR Data (Words + Coordinates)
+                data = pytesseract.image_to_data(img, output_type=Output.DICT)
+                draw = ImageDraw.Draw(img)
+                n_boxes = len(data['text'])
+                
+                # 2. Analyze Content for Sensitive Info
+                # We reconstruct the text to run NLP on the full context
+                # Note: This simple reconstruction might lose some spacing, but usually works for NER
+                valid_words = [w for w in data['text'] if w.strip()]
+                full_page_text = " ".join(valid_words)
+                
+                # Run NLP
+                doc = nlp(full_page_text)
+                sensitive_tokens = set()
+                
+                # Add Named Entities (Names, Locations)
+                for ent in doc.ents:
+                    if ent.label_ in ["PERSON", "GPE"]:
+                        # Setup individual tokens for matching loop
+                        for token in ent:
+                            sensitive_tokens.add(token.text)
+                
+                # 3. Iterate and Redact
+                for i in range(n_boxes):
+                    word = data['text'][i].strip()
+                    if not word: continue
+                    
+                    should_redact = False
+                    
+                    # Check Regex (Email)
+                    if re.match(r'[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}', word):
+                        should_redact = True
+                        
+                    # Check NLP Match (Token based)
+                    # We strip punctuation to match tokens like "Mike," -> "Mike"
+                    clean_word = re.sub(r'[^\w\s]', '', word)
+                    if word in sensitive_tokens or clean_word in sensitive_tokens:
+                        should_redact = True
+                    
+                    if should_redact:
+                        (x, y, w, h) = (data['left'][i], data['top'][i], data['width'][i], data['height'][i])
+                        # Draw black box
+                        draw.rectangle([x, y, x + w, y + h], fill="black")
+                
+                redacted_images.append(img)
+            
+            # Save images back to PDF
+            pdf_bytes = io.BytesIO()
+            if redacted_images:
+                redacted_images[0].save(pdf_bytes, format='PDF', save_all=True, append_images=redacted_images[1:])
+            pdf_bytes.seek(0)
+            pdf_base64 = base64.b64encode(pdf_bytes.read()).decode('utf-8')
+            
+            return {
+                "message": "PDF (OCR) Redaction successful",
+                "pdf_base64": pdf_base64,
+                "_links": {
+                    "self": {"href": "/redact/pdf", "method": "POST"},
+                    "hash": {"href": "/hash", "method": "POST"}
+                }
+            }
+
         except Exception as e:
             print(f"OCR Failed: {e}")
+            # Fall through to standard text logic if OCR fails completely
 
     # Redact the extracted text
     redacted_content = redact_text(text)
