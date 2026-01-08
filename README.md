@@ -1,5 +1,11 @@
 # Microservices Coursework
 
+## 🚀 Live Cloud Deployment
+**Access the Secure Redactor App here:**  
+👉 [https://frontend-web.gentlemeadow-2504a69e.italynorth.azurecontainerapps.io](https://frontend-web.gentlemeadow-2504a69e.italynorth.azurecontainerapps.io)
+
+---
+
 ## Part A: Local Development (Electron + Python)
 
 ### Prerequisites
