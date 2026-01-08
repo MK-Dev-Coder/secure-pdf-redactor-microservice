@@ -16,6 +16,9 @@ from sqlalchemy import create_engine, Column, Integer, String, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import datetime
+import pytesseract
+from pdf2image import convert_from_bytes
+from PIL import Image
 
 app = FastAPI()
 
@@ -169,8 +172,20 @@ async def redact_pdf_file(file: UploadFile = File(...)):
     reader = PdfReader(pdf_file)
     text = ""
     for page in reader.pages:
-        text += page.extract_text() + "\n"
+        extracted = page.extract_text()
+        if extracted:
+            text += extracted + "\n"
     
+    # Fallback to OCR if text is empty (Scanned PDF)
+    if len(text.strip()) < 5:
+        print("Standard extraction failed. Running OCR...")
+        try:
+            images = convert_from_bytes(content)
+            for img in images:
+                text += pytesseract.image_to_string(img) + "\n"
+        except Exception as e:
+            print(f"OCR Failed: {e}")
+
     # Redact the extracted text
     redacted_content = redact_text(text)
     

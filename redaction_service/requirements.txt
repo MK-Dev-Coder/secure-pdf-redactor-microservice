@@ -11,3 +11,7 @@ sqlalchemy
 
 pytest
 httpx
+
+pytesseract
+pdf2image
+pillow
