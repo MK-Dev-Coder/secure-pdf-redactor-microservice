@@ -113,6 +113,13 @@ function setBackground(type) {
         body.style.backgroundRepeat = 'no-repeat';
         body.style.backgroundSize = 'cover';
         body.style.backgroundAttachment = 'fixed';
+    } else if (type === 'meme') {
+        const url = `url('meme.png'), url('meme.png')`;
+        body.style.setProperty('--bg-image', url);
+        body.style.backgroundPosition = 'left top, right top';
+        body.style.backgroundRepeat = 'repeat-y, repeat-y';
+        body.style.backgroundSize = '15% auto';
+        body.style.backgroundAttachment = 'scroll';
     } else {
         body.style.setProperty('--bg-image', 'none');
         body.style.backgroundPosition = '';
