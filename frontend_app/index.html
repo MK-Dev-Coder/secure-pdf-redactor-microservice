@@ -157,9 +157,48 @@
             font-size: 0.8rem;
             color: var(--text-light);
         }
+
+        /* Background Themes */
+        .stars-bg {
+            background-image: url('stars.png');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            color: white; 
+        }
+        
+        .stars-bg .subtitle, .stars-bg label, .stars-bg h1 {
+            color: white;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        .stars-bg .container {
+            background-color: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+        }
+
+        .settings-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+        }
+
+        select {
+            padding: 5px 10px;
+            border-radius: 5px;
+            border: 1px solid var(--border);
+            font-family: inherit;
+        }
     </style>
 </head>
 <body>
+    <div class="settings-panel">
+        <select id="bgSelector" onchange="changeBackground(this.value)">
+            <option value="default">Default Theme</option>
+            <option value="stars">Stars Theme</option>
+        </select>
+    </div>
+
     <div class="container">
         <header>
             <h1><i class="fa-solid fa-shield-halved"></i> Secure Redactor</h1>
@@ -183,5 +222,14 @@
     </div>
 
     <script src="renderer.js"></script>
+    <script>
+        function changeBackground(theme) {
+            if (theme === 'stars') {
+                document.body.classList.add('stars-bg');
+            } else {
+                document.body.classList.remove('stars-bg');
+            }
+        }
+    </script>
 </body>
 </html>

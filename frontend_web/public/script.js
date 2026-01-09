@@ -105,8 +105,20 @@ function setBackground(type) {
         body.style.setProperty('--bg-image', url);
         body.style.backgroundPosition = 'left top, right top';
         body.style.backgroundRepeat = 'repeat-y, repeat-y';
+        body.style.backgroundSize = '15% auto';
+        body.style.backgroundAttachment = 'scroll';
+    } else if (type === 'stars') {
+        body.style.setProperty('--bg-image', "url('stars.png')");
+        body.style.backgroundPosition = 'center';
+        body.style.backgroundRepeat = 'no-repeat';
+        body.style.backgroundSize = 'cover';
+        body.style.backgroundAttachment = 'fixed';
     } else {
         body.style.setProperty('--bg-image', 'none');
+        body.style.backgroundPosition = '';
+        body.style.backgroundRepeat = '';
+        body.style.backgroundSize = '';
+        body.style.backgroundAttachment = '';
     }
     localStorage.setItem('background', type);
     settingsDropdown.classList.remove('show');
