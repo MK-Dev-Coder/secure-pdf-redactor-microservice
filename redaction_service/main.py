@@ -288,6 +288,16 @@ async def redact_pdf_file(file: UploadFile = File(...)):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", size=12)
+
+    # ADDED NOTICE: Warn user that images were removed
+    pdf.set_font("Arial", 'B', size=12)
+    pdf.set_text_color(200, 0, 0) # Dark Red
+    pdf.multi_cell(0, 10, "[NOTICE: Original images and formatting have been removed because they may contain sensitive info]")
+    pdf.ln(5)
+    
+    # Reset font for content
+    pdf.set_font("Arial", size=12)
+    pdf.set_text_color(0, 0, 0)
     
     # Handle encoding for FPDF (standard font supports latin-1)
     safe_text = redacted_content.encode('latin-1', 'replace').decode('latin-1')
