@@ -2,7 +2,7 @@
 
 ## 🚀 Live Cloud Deployment
 **Access the Secure Redactor App here:**  
-👉 [https://frontend-web.gentlemeadow-2504a69e.italynorth.azurecontainerapps.io](https://frontend-web.gentlemeadow-2504a69e.italynorth.azurecontainerapps.io)
+👉 [http://9.235.145.159](http://9.235.145.159)
 
 ---
 

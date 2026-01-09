@@ -114,7 +114,7 @@ function setBackground(type) {
         body.style.backgroundSize = 'cover';
         body.style.backgroundAttachment = 'fixed';
     } else if (type === 'meme') {
-        const url = `url('meme.png'), url('meme.png')`;
+        const url = `url('images/meme.png'), url('images/meme.png')`;
         body.style.setProperty('--bg-image', url);
         body.style.backgroundPosition = 'left top, right top';
         body.style.backgroundRepeat = 'repeat-y, repeat-y';
