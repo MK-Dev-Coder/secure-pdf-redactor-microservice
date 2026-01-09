@@ -189,85 +189,85 @@ async def redact_pdf_file(file: UploadFile = File(...)):
         
         for img in images:
             # OPTIMIZATION: Enhance image for OCR (Grayscale + Thresholding)
-                # This helps isolate numbers from brick/textured backgrounds
-                gray = img.convert('L')
-                # Binary threshold: Make dark text darker, light background lighter
-                bw = gray.point(lambda x: 0 if x < 140 else 255, '1')
+            # This helps isolate numbers from brick/textured backgrounds
+            gray = img.convert('L')
+            # Binary threshold: Make dark text darker, light background lighter
+            bw = gray.point(lambda x: 0 if x < 140 else 255, '1')
 
-                # 1. Get OCR Data (Words + Coordinates) from the ENHANCED image
-                # PSM 11 is 'Sparse Text', good for scattered words/numbers
-                custom_config = r'--psm 11'
-                data = pytesseract.image_to_data(bw, output_type=Output.DICT, config=custom_config)
-                
-                draw = ImageDraw.Draw(img)
-                n_boxes = len(data['text'])
-                
-                # 2. Analyze Content for Sensitive Info
-                # We reconstruct the text to run NLP on the full context
-                # Note: This simple reconstruction might lose some spacing, but usually works for NER
-                valid_words = [w for w in data['text'] if w.strip()]
-                full_page_text = " ".join(valid_words)
-                
-                # Run NLP
-                doc = nlp(full_page_text)
-                sensitive_tokens = set()
-                
-                # Add Named Entities (Names, Locations)
-                for ent in doc.ents:
-                    if ent.label_ in ["PERSON", "GPE"]:
-                        # Setup individual tokens for matching loop
-                        for token in ent:
-                            sensitive_tokens.add(token.text)
-                
-                # 3. Iterate and Redact
-                for i in range(n_boxes):
-                    word = data['text'][i].strip()
-                    if not word: continue
-                    
-                    should_redact = False
-                    
-                    # Check Regex (Email)
-                    if re.match(r'[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}', word):
-                        should_redact = True
-
-                    # Check Regex (House Numbers / Phone portions)
-                    # aggressive: redact matches for ANY digit sequence in images 
-                    # This catches vertical numbers like "1", "0", "3", "5" often split by OCR
-                    if re.match(r'^\d+$', word):
-                        should_redact = True
-
-                    # Check Regex (Address Context words)
-                    if re.match(r'^(Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Lane|Ln|Drive|Dr|Way|Court|Ct|Plaza|Plz)$', word, re.IGNORECASE):
-                        should_redact = True
-                        
-                    # Check NLP Match (Token based)
-                    # We strip punctuation to match tokens like "Mike," -> "Mike"
-                    clean_word = re.sub(r'[^\w\s]', '', word)
-                    if word in sensitive_tokens or clean_word in sensitive_tokens:
-                        should_redact = True
-                    
-                    if should_redact:
-                        (x, y, w, h) = (data['left'][i], data['top'][i], data['width'][i], data['height'][i])
-                        # Draw black box
-                        draw.rectangle([x, y, x + w, y + h], fill="black")
-                
-                redacted_images.append(img)
+            # 1. Get OCR Data (Words + Coordinates) from the ENHANCED image
+            # PSM 11 is 'Sparse Text', good for scattered words/numbers
+            custom_config = r'--psm 11'
+            data = pytesseract.image_to_data(bw, output_type=Output.DICT, config=custom_config)
             
-            # Save images back to PDF
-            pdf_bytes = io.BytesIO()
-            if redacted_images:
-                redacted_images[0].save(pdf_bytes, format='PDF', save_all=True, append_images=redacted_images[1:])
-            pdf_bytes.seek(0)
-            pdf_base64 = base64.b64encode(pdf_bytes.read()).decode('utf-8')
+            draw = ImageDraw.Draw(img)
+            n_boxes = len(data['text'])
             
-            return {
-                "message": "PDF Redaction successful",
-                "pdf_base64": pdf_base64,
-                "_links": {
-                    "self": {"href": "/redact/pdf", "method": "POST"},
-                    "hash": {"href": "/hash", "method": "POST"}
-                }
+            # 2. Analyze Content for Sensitive Info
+            # We reconstruct the text to run NLP on the full context
+            # Note: This simple reconstruction might lose some spacing, but usually works for NER
+            valid_words = [w for w in data['text'] if w.strip()]
+            full_page_text = " ".join(valid_words)
+            
+            # Run NLP
+            doc = nlp(full_page_text)
+            sensitive_tokens = set()
+            
+            # Add Named Entities (Names, Locations)
+            for ent in doc.ents:
+                if ent.label_ in ["PERSON", "GPE"]:
+                    # Setup individual tokens for matching loop
+                    for token in ent:
+                        sensitive_tokens.add(token.text)
+            
+            # 3. Iterate and Redact
+            for i in range(n_boxes):
+                word = data['text'][i].strip()
+                if not word: continue
+                
+                should_redact = False
+                
+                # Check Regex (Email)
+                if re.match(r'[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}', word):
+                    should_redact = True
+
+                # Check Regex (House Numbers / Phone portions)
+                # aggressive: redact matches for ANY digit sequence in images 
+                # This catches vertical numbers like "1", "0", "3", "5" often split by OCR
+                if re.match(r'^\d+$', word):
+                    should_redact = True
+
+                # Check Regex (Address Context words)
+                if re.match(r'^(Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Lane|Ln|Drive|Dr|Way|Court|Ct|Plaza|Plz)$', word, re.IGNORECASE):
+                    should_redact = True
+                    
+                # Check NLP Match (Token based)
+                # We strip punctuation to match tokens like "Mike," -> "Mike"
+                clean_word = re.sub(r'[^\w\s]', '', word)
+                if word in sensitive_tokens or clean_word in sensitive_tokens:
+                    should_redact = True
+                
+                if should_redact:
+                    (x, y, w, h) = (data['left'][i], data['top'][i], data['width'][i], data['height'][i])
+                    # Draw black box
+                    draw.rectangle([x, y, x + w, y + h], fill="black")
+            
+            redacted_images.append(img)
+        
+        # Save images back to PDF
+        pdf_bytes = io.BytesIO()
+        if redacted_images:
+            redacted_images[0].save(pdf_bytes, format='PDF', save_all=True, append_images=redacted_images[1:])
+        pdf_bytes.seek(0)
+        pdf_base64 = base64.b64encode(pdf_bytes.read()).decode('utf-8')
+        
+        return {
+            "message": "PDF Redaction successful",
+            "pdf_base64": pdf_base64,
+            "_links": {
+                "self": {"href": "/redact/pdf", "method": "POST"},
+                "hash": {"href": "/hash", "method": "POST"}
             }
+        }
 
     except Exception as e:
         print(f"OCR/Image Processing Failed: {e}")
