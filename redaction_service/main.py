@@ -167,10 +167,8 @@ async def redact_and_pdf(request: TextRequest):
 async def redact_pdf_file(file: UploadFile = File(...)):
     # Read the uploaded file
     content = await file.read()
-    pdf_file = io.BytesIO(content)
     
     # Process EVERYTHING as images (Visual Redaction)
-    # This preserves original formatting, images, and layout while redacting sensitive text.
     print("Processing PDF with Visual Redaction...")
     try:
         images = convert_from_bytes(content)
@@ -188,11 +186,10 @@ async def redact_pdf_file(file: UploadFile = File(...)):
             db.close()
         
         for img in images:
-            # OPTIMIZATION: Convert to grayscale for consistent OCR, but skip aggressive thresholding
-            # (Tesseract's internal binarization is often better for preserving edge details)
+            # OPTIMIZATION: Convert to grayscale for consistent OCR
             gray = img.convert('L')
 
-            # 1. Get OCR Data (Words + Coordinates) from the ENHANCED image
+            # 1. Get OCR Data (Words + Coordinates)
             # PSM 11 is 'Sparse Text', good for scattered words/numbers
             custom_config = r'--psm 11'
             data = pytesseract.image_to_data(gray, output_type=Output.DICT, config=custom_config)
@@ -201,8 +198,7 @@ async def redact_pdf_file(file: UploadFile = File(...)):
             n_boxes = len(data['text'])
             
             # 2. Analyze Content for Sensitive Info
-            # We reconstruct the text to run NLP on the full context
-            # Note: This simple reconstruction might lose some spacing, but usually works for NER
+            # Reconstruct text to run NLP on the full context
             valid_words = [w for w in data['text'] if w.strip()]
             full_page_text = " ".join(valid_words)
             
@@ -210,12 +206,12 @@ async def redact_pdf_file(file: UploadFile = File(...)):
             doc = nlp(full_page_text)
             sensitive_tokens = set()
             
-            # Add Named Entities (Names, Locations)
+            # Add Named Entities (Names, Locations, Organizations, Facilities)
+            # FIX: Added LOC, FAC, ORG and converted to LOWERCASE
             for ent in doc.ents:
-                if ent.label_ in ["PERSON", "GPE"]:
-                    # Setup individual tokens for matching loop
+                if ent.label_ in ["PERSON", "GPE", "LOC", "FAC", "ORG"]:
                     for token in ent:
-                        sensitive_tokens.add(token.text)
+                        sensitive_tokens.add(token.text.lower())
             
             # 3. Iterate and Redact
             for i in range(n_boxes):
@@ -229,12 +225,9 @@ async def redact_pdf_file(file: UploadFile = File(...)):
                     should_redact = True
                 
                 # CLEANUP FOR MATCHING
-                # Remove punctuation/noise to help match numbers and names (e.g. "1." -> "1", "Mike," -> "Mike")
                 clean_word = re.sub(r'[^\w]', '', word)
 
                 # Check Regex (House Numbers / Phone portions)
-                # Aggressive: Redact if the CLEANED word is a digit. 
-                # This catches "1.", "|5", "2," which regex ^\d+$ misses
                 if clean_word.isdigit():
                     should_redact = True
 
@@ -242,14 +235,14 @@ async def redact_pdf_file(file: UploadFile = File(...)):
                 if re.match(r'^(Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Lane|Ln|Drive|Dr|Way|Court|Ct|Plaza|Plz|Square|Sq|Circle|Cir|North|South|East|West|N|S|E|W)$', clean_word, re.IGNORECASE):
                     should_redact = True
                     
-                # Check NLP Match (Token based) - RE-ADDED LOGIC
-                if word in sensitive_tokens or clean_word in sensitive_tokens:
+                # Check NLP Match (Token based) - ROBUST FIX
+                # FIX: Check against lowercase version of the word to catch case mismatches
+                if word.lower() in sensitive_tokens or clean_word.lower() in sensitive_tokens:
                     should_redact = True
 
                 if should_redact:
                     (x, y, w, h) = (data['left'][i], data['top'][i], data['width'][i], data['height'][i])
                     # Draw black box with PADDING
-                    # We expand the box by 5 pixels to cover anti-aliasing edges and OCR drift
                     pad = 5
                     draw.rectangle([x - pad, y - pad, x + w + pad, y + h + pad], fill="black")
             
