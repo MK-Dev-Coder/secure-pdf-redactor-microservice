@@ -19,3 +19,7 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+
+# Custom
+REPORT.md
+/meme.png
