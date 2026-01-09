@@ -229,23 +229,22 @@ async def redact_pdf_file(file: UploadFile = File(...)):
                 # Check Regex (Email)
                 if re.match(r'[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}', word):
                     should_redact = True
+                
+                # CLEANUP FOR MATCHING
+                # Remove punctuation/noise to help match numbers and names (e.g. "1." -> "1", "Mike," -> "Mike")
+                clean_word = re.sub(r'[^\w]', '', word)
 
                 # Check Regex (House Numbers / Phone portions)
-                # aggressive: redact matches for ANY digit sequence in images 
-                # This catches vertical numbers like "1", "0", "3", "5" often split by OCR
-                if re.match(r'^\d+$', word):
+                # Aggressive: Redact if the CLEANED word is a digit. 
+                # This catches "1.", "|5", "2," which regex ^\d+$ misses
+                if clean_word.isdigit():
                     should_redact = True
 
                 # Check Regex (Address Context words)
-                if re.match(r'^(Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Lane|Ln|Drive|Dr|Way|Court|Ct|Plaza|Plz)$', word, re.IGNORECASE):
+                if re.match(r'^(Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Lane|Ln|Drive|Dr|Way|Court|Ct|Plaza|Plz|Square|Sq|Circle|Cir|North|South|East|West|N|S|E|W)$', clean_word, re.IGNORECASE):
                     should_redact = True
                     
                 # Check NLP Match (Token based)
-                # We strip punctuation to match tokens like "Mike," -> "Mike"
-                clean_word = re.sub(r'[^\w\s]', '', word)
-                if word in sensitive_tokens or clean_word in sensitive_tokens:
-                    should_redact = True
-                
                 if should_redact:
                     (x, y, w, h) = (data['left'][i], data['top'][i], data['width'][i], data['height'][i])
                     # Draw black box
