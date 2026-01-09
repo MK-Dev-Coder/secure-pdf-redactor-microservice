@@ -1,10 +1,11 @@
 name: Build and Deploy to Azure
 
 on:
-  push:
-    branches:
-      - main
-      - part-B
+  workflow_dispatch:
+  # push:
+  #   branches:
+  #     - main
+  #     - part-B
 
 jobs:
   build-and-deploy:

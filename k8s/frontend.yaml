@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend-web
+  template:
+    metadata:
+      labels:
+        app: frontend-web
+    spec:
+      containers:
+      - name: frontend-web
+        # REPLACE_WITH_ACR_NAME in pipeline
+        image: REPLACE_WITH_ACR_NAME/frontend-web:latest
+        ports:
+        - containerPort: 3000
+        env:
+        - name: BACKEND_URL
+          value: "http://redaction-service:8000"
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "250m"
+            memory: "256Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-web
+spec:
+  selector:
+    app: frontend-web
+  ports:
+    - port: 80
+      targetPort: 3000
+  type: LoadBalancer

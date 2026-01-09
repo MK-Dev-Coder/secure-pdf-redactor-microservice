@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redaction-service
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: redaction-service
+  template:
+    metadata:
+      labels:
+        app: redaction-service
+    spec:
+      containers:
+      - name: redaction-service
+        # REPLACE_WITH_ACR_NAME in pipeline
+        image: REPLACE_WITH_ACR_NAME/redaction-service:latest
+        ports:
+        - containerPort: 8000
+        env:
+        - name: CONSUL_HOST
+          value: "consul"
+        - name: CONSUL_PORT
+          value: "8500"
+        resources:
+          requests:
+            cpu: "250m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redaction-service
+spec:
+  selector:
+    app: redaction-service
+  ports:
+    - port: 8000
+      targetPort: 8000
+  type: ClusterIP
