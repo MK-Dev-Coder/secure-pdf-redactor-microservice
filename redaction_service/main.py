@@ -188,16 +188,14 @@ async def redact_pdf_file(file: UploadFile = File(...)):
             db.close()
         
         for img in images:
-            # OPTIMIZATION: Enhance image for OCR (Grayscale + Thresholding)
-            # This helps isolate numbers from brick/textured backgrounds
+            # OPTIMIZATION: Convert to grayscale for consistent OCR, but skip aggressive thresholding
+            # (Tesseract's internal binarization is often better for preserving edge details)
             gray = img.convert('L')
-            # Binary threshold: Make dark text darker, light background lighter
-            bw = gray.point(lambda x: 0 if x < 140 else 255, '1')
 
             # 1. Get OCR Data (Words + Coordinates) from the ENHANCED image
             # PSM 11 is 'Sparse Text', good for scattered words/numbers
             custom_config = r'--psm 11'
-            data = pytesseract.image_to_data(bw, output_type=Output.DICT, config=custom_config)
+            data = pytesseract.image_to_data(gray, output_type=Output.DICT, config=custom_config)
             
             draw = ImageDraw.Draw(img)
             n_boxes = len(data['text'])
@@ -247,8 +245,10 @@ async def redact_pdf_file(file: UploadFile = File(...)):
                 # Check NLP Match (Token based)
                 if should_redact:
                     (x, y, w, h) = (data['left'][i], data['top'][i], data['width'][i], data['height'][i])
-                    # Draw black box
-                    draw.rectangle([x, y, x + w, y + h], fill="black")
+                    # Draw black box with PADDING
+                    # We expand the box by 5 pixels to cover anti-aliasing edges and OCR drift
+                    pad = 5
+                    draw.rectangle([x - pad, y - pad, x + w + pad, y + h + pad], fill="black")
             
             redacted_images.append(img)
         
