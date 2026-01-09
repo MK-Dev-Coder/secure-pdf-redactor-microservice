@@ -169,23 +169,26 @@ async def redact_pdf_file(file: UploadFile = File(...)):
     content = await file.read()
     pdf_file = io.BytesIO(content)
     
-    # Extract text from PDF
-    reader = PdfReader(pdf_file)
-    text = ""
-    for page in reader.pages:
-        extracted = page.extract_text()
-        if extracted:
-            text += extracted + "\n"
-    
-    # Fallback to OCR if text is empty (Scanned PDF)
-    if len(text.strip()) < 5:
-        print("Standard extraction failed. Running OCR...")
+    # Process EVERYTHING as images (Visual Redaction)
+    # This preserves original formatting, images, and layout while redacting sensitive text.
+    print("Processing PDF with Visual Redaction...")
+    try:
+        images = convert_from_bytes(content)
+        redacted_images = []
+        
+        # Log to Database
+        db = SessionLocal()
         try:
-            images = convert_from_bytes(content)
-            redacted_images = []
-            
-            for img in images:
-                # OPTIMIZATION: Enhance image for OCR (Grayscale + Thresholding)
+            log_entry = RedactionLog(request_type="pdf", item_count=len(images))
+            db.add(log_entry)
+            db.commit()
+        except Exception as e:
+            print(f"DB Error: {e}")
+        finally:
+            db.close()
+        
+        for img in images:
+            # OPTIMIZATION: Enhance image for OCR (Grayscale + Thresholding)
                 # This helps isolate numbers from brick/textured backgrounds
                 gray = img.convert('L')
                 # Binary threshold: Make dark text darker, light background lighter
@@ -258,7 +261,7 @@ async def redact_pdf_file(file: UploadFile = File(...)):
             pdf_base64 = base64.b64encode(pdf_bytes.read()).decode('utf-8')
             
             return {
-                "message": "PDF (OCR) Redaction successful",
+                "message": "PDF Redaction successful",
                 "pdf_base64": pdf_base64,
                 "_links": {
                     "self": {"href": "/redact/pdf", "method": "POST"},
@@ -266,62 +269,9 @@ async def redact_pdf_file(file: UploadFile = File(...)):
                 }
             }
 
-        except Exception as e:
-            print(f"OCR Failed: {e}")
-            # Fall through to standard text logic if OCR fails completely
-
-    # Redact the extracted text
-    redacted_content = redact_text(text)
-    
-    # Log to Database
-    db = SessionLocal()
-    try:
-        log_entry = RedactionLog(request_type="pdf", item_count=len(reader.pages))
-        db.add(log_entry)
-        db.commit()
     except Exception as e:
-        print(f"DB Error: {e}")
-    finally:
-        db.close()
-    
-    # Generate new PDF
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Arial", size=12)
-
-    # ADDED NOTICE: Warn user that images were removed
-    pdf.set_font("Arial", 'B', size=12)
-    pdf.set_text_color(200, 0, 0) # Dark Red
-    pdf.multi_cell(0, 10, "[NOTICE: Original images and formatting have been removed because they may contain sensitive info]")
-    pdf.ln(5)
-    
-    # Reset font for content
-    pdf.set_font("Arial", size=12)
-    pdf.set_text_color(0, 0, 0)
-    
-    # Handle encoding for FPDF (standard font supports latin-1)
-    safe_text = redacted_content.encode('latin-1', 'replace').decode('latin-1')
-    pdf.multi_cell(0, 10, safe_text)
-    
-    output_filename = f"redacted_{uuid.uuid4()}.pdf"
-    pdf.output(output_filename)
-    
-    # Read file and encode to base64
-    with open(output_filename, "rb") as f:
-        pdf_data = f.read()
-        pdf_base64 = base64.b64encode(pdf_data).decode('utf-8')
-    
-    # Clean up file
-    os.remove(output_filename)
-    
-    return {
-        "message": "PDF Redaction successful",
-        "pdf_base64": pdf_base64,
-        "_links": {
-            "self": {"href": "/redact/pdf", "method": "POST"},
-            "hash": {"href": "/hash", "method": "POST"}
-        }
-    }
+        print(f"OCR/Image Processing Failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/stats")
 async def get_stats():
