@@ -242,7 +242,10 @@ async def redact_pdf_file(file: UploadFile = File(...)):
                 if re.match(r'^(Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Lane|Ln|Drive|Dr|Way|Court|Ct|Plaza|Plz|Square|Sq|Circle|Cir|North|South|East|West|N|S|E|W)$', clean_word, re.IGNORECASE):
                     should_redact = True
                     
-                # Check NLP Match (Token based)
+                # Check NLP Match (Token based) - RE-ADDED LOGIC
+                if word in sensitive_tokens or clean_word in sensitive_tokens:
+                    should_redact = True
+
                 if should_redact:
                     (x, y, w, h) = (data['left'][i], data['top'][i], data['width'][i], data['height'][i])
                     # Draw black box with PADDING
