@@ -2,6 +2,10 @@
 
 ## 🚀 Live Cloud Deployment
 **Access the Secure Redactor App here:**  
+Aca Version
+👉 https://frontend-web.gentlemeadow-2504a69e.italynorth.azurecontainerapps.io/
+                     or
+    Aks Version
 👉 [http://9.235.145.159](http://9.235.145.159)
 
 ---
