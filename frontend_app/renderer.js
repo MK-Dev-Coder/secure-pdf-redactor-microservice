@@ -6,14 +6,14 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
 
     const statusDiv = document.getElementById('status');
     
-    // Reset classes
+    // Reset status indicator classes
     statusDiv.className = '';
     statusDiv.classList.add('status-loading');
     statusDiv.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
 
     const result = await ipcRenderer.invoke('redact-text', text);
 
-    statusDiv.className = ''; // Clear loading class
+    statusDiv.className = ''; // Reset class list
 
     if (result.success) {
         if (result.path) {

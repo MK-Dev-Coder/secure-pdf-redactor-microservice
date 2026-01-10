@@ -1,24 +1,24 @@
-# Setup Script for Azure Kubernetes Service (AKS)
-# Run this in PowerShell to provision your cloud infrastructure for the coursework.
+
+
 
 $RESOURCE_GROUP = "cloud-project-rg"
 $LOCATION = "italynorth" # Change if needed
 $ACR_NAME = "redactionacr$((Get-Random -Minimum 1000 -Maximum 9999))" # Unique name
 $AKS_CLUSTER_NAME = "redaction-cluster"
 
-# 1. Login
+# 1. Authenticate to Azure CLI
 Write-Host "Logging into Azure..."
 az login
 
-# 2. Create Resource Group
+# 2. Provision Azure Resource Group
 Write-Host "Creating Resource Group: $RESOURCE_GROUP..."
 az group create --name $RESOURCE_GROUP --location $LOCATION
 
-# 3. Create Container Registry (ACR)
+# 3. Provision Azure Container Registry instance
 Write-Host "Creating ACR: $ACR_NAME..."
 az acr create --resource-group $RESOURCE_GROUP --name $ACR_NAME --sku Basic
 
-# 4. Create AKS Cluster (2 Nodes as required by Coursework)
+# 4. Provision Kubernetes Cluster with ACR integration 
 Write-Host "Creating AKS Cluster with 2 Nodes..."
 az aks create `
     --resource-group $RESOURCE_GROUP `
@@ -27,7 +27,7 @@ az aks create `
     --generate-ssh-keys `
     --attach-acr $ACR_NAME
 
-# 5. Get Credentials
+# 5. Retrieve cluster credentials for kubectl context
 Write-Host "Getting Cluster Credentials..."
 az aks get-credentials --resource-group $RESOURCE_GROUP --name $AKS_CLUSTER_NAME
 

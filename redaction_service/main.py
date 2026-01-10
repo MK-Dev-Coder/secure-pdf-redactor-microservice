@@ -23,13 +23,13 @@ from PIL import Image, ImageDraw
 
 app = FastAPI()
 
-# Database Setup (SQLite)
+# Initialize database connection and session management
 DATABASE_URL = "sqlite:///./redaction.db"
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# Database Model
+# Define database schema for audit logging
 class RedactionLog(Base):
     __tablename__ = "redaction_logs"
     id = Column(Integer, primary_key=True, index=True)
@@ -37,10 +37,10 @@ class RedactionLog(Base):
     request_type = Column(String)  # 'text' or 'pdf'
     item_count = Column(Integer)   # Length of text or number of pages
 
-# Create Tables
+# Initialize database schema
 Base.metadata.create_all(bind=engine)
 
-# Load SpaCy Model
+# Initialize NLP model for entity recognition
 try:
     nlp = spacy.load("en_core_web_sm")
 except OSError:
@@ -49,7 +49,7 @@ except OSError:
     download("en_core_web_sm")
     nlp = spacy.load("en_core_web_sm")
 
-# Consul Configuration
+# Configuration parameters for Consul service registry
 CONSUL_HOST = os.getenv("CONSUL_HOST", "localhost")
 CONSUL_PORT = int(os.getenv("CONSUL_PORT", 8500))
 SERVICE_NAME = "redaction-service"
@@ -58,7 +58,7 @@ SERVICE_PORT = 8000
 def register_service():
     try:
         c = consul.Consul(host=CONSUL_HOST, port=CONSUL_PORT)
-        # Get local IP - in a real container setup, this might need adjustment
+        # Retrieve local IP address for service registration data
         hostname = socket.gethostname()
         ip_address = socket.gethostbyname(hostname)
         
@@ -85,28 +85,26 @@ class HashRequest(BaseModel):
 
 @app.post("/hash")
 async def hash_text(request: HashRequest):
-    # Create SHA256 hash
+    # Compute SHA-256 hash of the input text
     hash_object = hashlib.sha256(request.text.encode())
     hex_dig = hash_object.hexdigest()
     return {"hash": hex_dig}
 
 def redact_text(text: str) -> str:
-    # Redaction Logic
+    # Implement redaction logic for text processing
     
-    # 1. Email Addresses (Regex is usually better/faster for strict patterns like email)
+    # 1. Redact email addresses employing regular expressions for efficient pattern matching
     email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
     text = re.sub(email_pattern, '[REDACTED EMAIL]', text)
     
-    # 2. Street Addresses (Regex Heuristic)
+    # 2. Redact street addresses using heuristic regular expression patterns
     address_pattern = r'\b\d+\s+[A-Za-z0-9\s]+(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Lane|Ln|Drive|Dr|Way|Court|Ct|Plaza|Plz)\b'
     text = re.sub(address_pattern, '[REDACTED ADDRESS]', text, flags=re.IGNORECASE)
     
-    # 3. Names and Locations (Using SpaCy NLP)
+    # 3. Identify and redact named entities (PERSON, GPE) utilising the Spacy NLP model
     doc = nlp(text)
     
-    # We need to replace entities. To avoid messing up indices while replacing,
-    # we can rebuild the string or replace from end to start.
-    # A simple way is to replace the text of the entity.
+    
     
     # Filter for PERSON (Names) and GPE (Cities, States, Countries) entities
     entities_to_redact = [ent for ent in doc.ents if ent.label_ in ["PERSON", "GPE"]]
@@ -126,7 +124,7 @@ def redact_text(text: str) -> str:
 async def redact_and_pdf(request: TextRequest):
     redacted_content = redact_text(request.text)
     
-    # Log to Database
+    # Persist redaction audit log to the database
     db = SessionLocal()
     try:
         log_entry = RedactionLog(request_type="text", item_count=len(request.text))
@@ -168,13 +166,13 @@ async def redact_pdf_file(file: UploadFile = File(...)):
     # Read the uploaded file
     content = await file.read()
     
-    # Process EVERYTHING as images (Visual Redaction)
+    # Convert PDF pages to images for visual redaction processing
     print("Processing PDF with Visual Redaction...")
     try:
         images = convert_from_bytes(content)
         redacted_images = []
         
-        # Log to Database
+        # Persist redaction audit log to the database
         db = SessionLocal()
         try:
             log_entry = RedactionLog(request_type="pdf", item_count=len(images))
@@ -186,11 +184,11 @@ async def redact_pdf_file(file: UploadFile = File(...)):
             db.close()
         
         for img in images:
-            # OPTIMIZATION: Convert to grayscale for consistent OCR
+            # Pre-process image to grayscale to enhance OCR accuracy
             gray = img.convert('L')
 
             # 1. Get OCR Data (Words + Coordinates)
-            # PSM 11 is 'Sparse Text', good for scattered words/numbers
+            # Configure Tesseract with PSM 11 for sparse text detection optimization
             custom_config = r'--psm 11'
             data = pytesseract.image_to_data(gray, output_type=Output.DICT, config=custom_config)
             
@@ -207,7 +205,7 @@ async def redact_pdf_file(file: UploadFile = File(...)):
             sensitive_tokens = set()
             
             # Add Named Entities (Names, Locations, Organizations, Facilities)
-            # FIX: Added LOC, FAC, ORG and converted to LOWERCASE
+            # Extract sensitive tokens (PERSON, GPE, LOC, FAC, ORG) for redaction targeting
             for ent in doc.ents:
                 if ent.label_ in ["PERSON", "GPE", "LOC", "FAC", "ORG"]:
                     for token in ent:
@@ -224,7 +222,7 @@ async def redact_pdf_file(file: UploadFile = File(...)):
                 if re.match(r'[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}', word):
                     should_redact = True
                 
-                # CLEANUP FOR MATCHING
+                # Sanitize token for matching comparison
                 clean_word = re.sub(r'[^\w]', '', word)
 
                 # Check Regex (House Numbers / Phone portions)
@@ -235,14 +233,14 @@ async def redact_pdf_file(file: UploadFile = File(...)):
                 if re.match(r'^(Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Lane|Ln|Drive|Dr|Way|Court|Ct|Plaza|Plz|Square|Sq|Circle|Cir|North|South|East|West|N|S|E|W)$', clean_word, re.IGNORECASE):
                     should_redact = True
                     
-                # Check NLP Match (Token based) - ROBUST FIX
-                # FIX: Check against lowercase version of the word to catch case mismatches
+                # Validate token against identified sensitive entities
+                # Case-insensitive check for sensitive terms
                 if word.lower() in sensitive_tokens or clean_word.lower() in sensitive_tokens:
                     should_redact = True
 
                 if should_redact:
                     (x, y, w, h) = (data['left'][i], data['top'][i], data['width'][i], data['height'][i])
-                    # Draw black box with PADDING
+                    # Apply redaction mask with specified padding
                     pad = 5
                     draw.rectangle([x - pad, y - pad, x + w + pad, y + h + pad], fill="black")
             

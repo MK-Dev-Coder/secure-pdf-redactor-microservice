@@ -12,13 +12,13 @@ const upload = multer({ storage: multer.memoryStorage() });
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
-// Backend URL (can be overridden by environment variable for Docker/Cloud)
-// In Docker Compose, this will be http://redaction-service:8000
-// Use 127.0.0.1 instead of localhost to avoid IPv6 ::1 issues on Windows
+// Define backend service URL, configurable via environment variables.
+// Default configuration targets the docker-compose service entry.
+// Use IPv4 loopback address to ensure compatibility across environments.
 const BACKEND_URL = process.env.BACKEND_URL || 'http://127.0.0.1:8000';
 
-// Proxy endpoint to handle the redaction request
-// This avoids CORS issues and keeps the API key/logic hidden if we had any
+// Implement proxy endpoint to forward redaction requests to the backend service.
+// Proxies requests to mitigate CORS restrictions and abstract backend logic.
 app.post('/api/redact', async (req, res) => {
     try {
         console.log(`Forwarding request to: ${BACKEND_URL}/redact`);

@@ -5,7 +5,7 @@ client = TestClient(app)
 
 def test_read_main():
     response = client.get("/")
-    assert response.status_code in [404, 405] # Root might not exist, checking connectivity
+    assert response.status_code in [404, 405] # Verify service connectivity; root endpoint allows 404 or 405.
 
 def test_hash_text():
     response = client.post("/hash", json={"text": "hello"})
@@ -14,7 +14,7 @@ def test_hash_text():
     assert response.json()["hash"] == "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
 
 def test_redact_text_names():
-    # Simple check if PII logic runs without crashing
+    # Verify that the PII redaction endpoint processes a request successfully
     response = client.post("/redact", json={"text": "Hello Mike, call me."})
     assert response.status_code == 200
     assert "pdf_base64" in response.json()
