@@ -5,7 +5,7 @@
 Aca Version
 👉 https://frontend-web.gentlemeadow-2504a69e.italynorth.azurecontainerapps.io/
                      or
-    Aks Version
+    AKS Version
 👉 [http://9.235.145.159](http://9.235.145.159)
 
 ---
